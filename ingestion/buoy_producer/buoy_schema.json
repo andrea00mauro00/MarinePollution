@@ -1,0 +1,15 @@
+{
+  "$id": "https://example.com/schemas/buoy_raw.json",
+  "title": "BuoyRaw",
+  "type": "object",
+  "properties": {
+    "buoy_id":         { "type": "string" },
+    "timestamp":      { "type": "string", "format": "date-time" },
+    "latitude":       { "type": "number" },
+    "longitude":      { "type": "number" },
+    "pH":             { "type": "number" },
+    "turbidity":      { "type": "number" },
+    "contaminant_ppm":{ "type": "number" }
+  },
+  "required": ["buoy_id","timestamp","latitude","longitude","pH","turbidity"]
+}

@@ -1,0 +1,15 @@
+{
+  "$id": "https://example.com/schemas/water_metrics_raw.json",
+  "title": "WaterMetricsRaw",
+  "type": "object",
+  "properties": {
+    "station_id":     { "type": "string" },
+    "timestamp":      { "type": "string", "format": "date-time" },
+    "pH":             { "type": "number" },
+    "turbidity":      { "type": "number" },
+    "contaminant_ppm":{ "type": "number" },
+    "temperature":    { "type": "number" },
+    "oxygen":         { "type": "number" }
+  },
+  "required": ["station_id","timestamp","pH","turbidity","temperature","oxygen"]
+}

@@ -1,0 +1,6 @@
+confluent-kafka
+jsonschema
+pyyaml
+httpx
+cachetools
+authlib
