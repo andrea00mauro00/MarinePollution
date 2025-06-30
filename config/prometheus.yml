@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-1:9102', 'kafka-2:9102']
+  
+  - job_name: 'flink'
+    static_configs:
+      - targets: ['flink-jobmanager:9249']
+  
+  - job_name: 'timescaledb'
+    static_configs:
+      - targets: ['timescaledb-exporter:9187']
