@@ -10,6 +10,13 @@ API_PWD      = os.getenv('COPERNICUS_API_PASSWORD')
 BUOY_ID      = os.getenv('COPERNICUS_BUOY_ID')
 POLL_INTERVAL= int(os.getenv('POLL_INTERVAL_SECONDS',300))
 
+# Geographic bounds for the request. Defaults target the Mediterranean area but
+# can be overridden via environment variables.
+LONGITUDE_MIN = float(os.getenv('COPERNICUS_LONGITUDE_MIN', '8.0'))
+LONGITUDE_MAX = float(os.getenv('COPERNICUS_LONGITUDE_MAX', '9.0'))
+LATITUDE_MIN  = float(os.getenv('COPERNICUS_LATITUDE_MIN', '44.0'))
+LATITUDE_MAX  = float(os.getenv('COPERNICUS_LATITUDE_MAX', '45.0'))
+
 def init_kafka():
     while True:
         try:
@@ -25,8 +32,10 @@ def fetch_buoy_data():
     payload = {
         'service_id': 'GLOBAL_ANALYSIS_FORECAST_PHY_001_024-TDS',
         'product_id': 'global-analysis-forecast-phy-l4',
-        'longitude_min':'…','longitude_max':'…',
-        'latitude_min':'…','latitude_max':'…',
+        'longitude_min': LONGITUDE_MIN,
+        'longitude_max': LONGITUDE_MAX,
+        'latitude_min': LATITUDE_MIN,
+        'latitude_max': LATITUDE_MAX,
         'date_min':'NOW-PT5M','date_max':'NOW',
         'variable':['sea_surface_temperature','salinity'],
         'motu': API_URL, 'user': API_USER, 'password': API_PWD
