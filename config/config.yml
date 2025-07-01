@@ -1,0 +1,17 @@
+noaa:
+  url: "https://www.ndbc.noaa.gov/data/latest_obs/latest_obs.txt"
+  poll_interval_s: 1800
+cmems:
+  insitu:
+    dataset_id: "cmems_obs-ins_med_phybgcwav_mynrt_na_irr"
+    poll_interval_s: 3600
+  biochem:
+    dataset_id: "medsea_analysisforecast_bgc_006_014"
+    schedule: "00:00"
+kafka:
+  brokers: "kafka:29092"
+  topics:
+    physical: "buoy_physical"
+    insitu_db: "buoy_insitu_db"
+    insitu_tg: "buoy_insitu_tg"
+    biochem:  "buoy_biochem"

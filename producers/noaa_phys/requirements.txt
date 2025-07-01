@@ -1,0 +1,4 @@
+requests
+pandas
+confluent-kafka
+pyyaml

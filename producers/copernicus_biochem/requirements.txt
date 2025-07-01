@@ -1,0 +1,5 @@
+copernicusmarine
+pandas
+confluent-kafka
+pyyaml
+schedule

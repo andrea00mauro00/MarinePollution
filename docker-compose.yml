@@ -1,174 +1,114 @@
-version: '3.8'
 
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
-    platform: linux/amd64
+    ports: ["2181:2181"]
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      retries: 5
+
 
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
+    image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
-    platform: linux/amd64
     depends_on:
       zookeeper:
         condition: service_healthy
-    ports:
-      - "9092:9092"
+    ports: ["9092:9092","29092:29092"]
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      healthcheck:
+        test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+        interval: 10s
+        timeout: 5s
+      retries: 5
+        retries: 5
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --list"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      retries: 5
 
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.4.0
-    container_name: schema-registry
-    platform: linux/amd64
-    depends_on:
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
-      
+
   postgres:
     image: postgres:15
-    container_name: marinepollution-postgres
-    platform: linux/amd64
-    ports:
-      - "5433:5432"
+    container_name: postgres
     environment:
       POSTGRES_USER: marine
       POSTGRES_PASSWORD: marinepw
-      POSTGRES_DB: marinets
+      POSTGRES_DB: marine_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_setup/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports: ["5432:5432"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U marine -d marinets"]
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      retries: 5
 
-  redis:
-    image: redis:7.0-alpine
-    container_name: marinepollution-redis
-    platform: linux/amd64
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
-  minio:
-    image: minio/minio
-    container_name: marinepollution-minio
-    platform: linux/amd64
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-
-  flink-jobmanager:
+  buoy_phys:
     build:
-      context: ./docker/flink-python
-    platform: linux/amd64
-    image: marinepollution/flink-python:1.17
-    container_name: flink-jobmanager
-    ports:
-      - "8082:8081"
-    command: jobmanager
-    environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: flink-jobmanager"
-    volumes:
-      - ./ingestion/processing/flink_jobs:/opt/flink/usrlib/flink_jobs:ro
+      context: .
+      dockerfile: producers/noaa_phys/Dockerfile
+    container_name: producer-noaa
+    env_file: .env
     depends_on:
       kafka:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+        condition: service_started
+    networks: [marine_net]
 
-  flink-taskmanager:
+  buoy_insitu_db:
     build:
-      context: ./docker/flink-python
-    platform: linux/amd64
-    image: marinepollution/flink-python:1.17
-    container_name: flink-taskmanager
-    depends_on:
-      - flink-jobmanager
-    command: taskmanager
+      context: .
+      dockerfile: producers/copernicus_insitu/Dockerfile
+    container_name: producer-insitu-db
+    env_file: .env
     environment:
-      FLINK_PROPERTIES: |
-        jobmanager.rpc.address: flink-jobmanager
-        taskmanager.numberOfTaskSlots: 4
-        taskmanager.memory.process.size: 2g
-    volumes:
-      - ./ingestion/processing/flink_jobs:/opt/flink/usrlib/flink_jobs:ro
+      - PLATFORM_TYPE=DB
+    depends_on:
+      kafka:
+        condition: service_started
+    networks: [marine_net]
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: marinepollution-grafana
-    platform: linux/amd64
-    ports:
-      - "3000:3000"
+  buoy_insitu_tg:
+    build:
+      context: .
+      dockerfile: producers/copernicus_insitu/Dockerfile
+    container_name: producer-insitu-tg
+    env_file: .env
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_INSTALL_PLUGINS: grafana-worldmap-panel,grafana-piechart-panel
-    volumes:
-      - grafana_data:/var/lib/grafana
+      - PLATFORM_TYPE=TG
     depends_on:
-      - postgres
-      - redis
+      kafka:
+        condition: service_started
+    networks: [marine_net]
 
-  prometheus:
-    image: prom/prometheus
-    container_name: marinepollution-prometheus
-    platform: linux/amd64
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
+  buoy_biochem:
+    build:
+      context: .
+      dockerfile: producers/copernicus_biochem/Dockerfile
+    container_name: producer-biochem
+    env_file: .env
     depends_on:
-      - flink-jobmanager
+      kafka:
+        condition: service_started
+    networks: [marine_net]
 
-volumes:
-  postgres_data:
-  minio_data:
-  grafana_data:
-  prometheus_data:
+networks:
+  marine_net:
+    driver: bridge
