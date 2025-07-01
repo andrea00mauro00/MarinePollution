@@ -20,7 +20,7 @@
    \`\`\`
 4. Avvia i container  
    \`\`\`bash
-   docker-compose -f docker-compose.yml -f docker-compose.ingestion.yml up -d
+   docker-compose up -d
    \`\`\`
 5. Verifica i log dei producer  
    \`\`\`bash
