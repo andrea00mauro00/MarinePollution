@@ -30,5 +30,13 @@
 ## Struttura
 
 - \`ingestion/\`: script Python + Dockerfile per i producer  
-- \`docker-compose*.yml\`: definizione dei servizi  
+- \`docker-compose*.yml\`: definizione dei servizi
 - \`consumer_alerts.py\`, \`main.py\`, ecc.
+
+## Testing
+
+Per eseguire i test unitari installa prima `pytest` e poi lancia:
+```bash
+pip install pytest
+pytest
+```
